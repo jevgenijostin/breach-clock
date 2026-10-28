@@ -1,5 +1,6 @@
 import "./style.css";
 import { Game } from "../engine/game";
+import { readRuleSet } from "../dsl/rule-set";
 import {
   hosts,
   users,
@@ -25,6 +26,7 @@ let draft = 'process_name = "powershell.exe"';
 let editing: number | undefined;
 let licenseBusy = false;
 let showPack = false;
+let importedRules: string[] = [];
 const queryFilter = { host: "", user: "", event_type: "", from: "1", to: "14" };
 const esc = (value: unknown) =>
   String(value ?? "").replace(
@@ -66,7 +68,7 @@ function renderPlay(v: ReturnType<Game["view"]>) {
   return `<section class="brief panel"><span class="badge">INCIDENT 001</span><p><b>Mail gateway:</b> invoice.docm was delivered to three employees. Unknown opener. Investigate Office-spawned processes and follow their context.</p><details><summary>Shift briefing & controls</summary><p>Each tick is five minutes. Telemetry arrives first; spend up to 3 AP, then end the turn. Query, deploy, isolate and reset each cost 1 AP. Rule edits/removal are free. Invalid actions cost nothing. New rules back-scan all collected telemetry. Rules alert; they never contain automatically.</p><p><b>Known business activity:</b> finance refresh on ${v.finance}, using dana; nightly backup from BKP-01 to FS-01 using svc-backup, then offsite-backup.example. Legacy export tasks may leave credentials cached on workstations.</p><p>Isolation blocks all host communication, but local process records may continue. Resets prevent new logons; existing sessions need isolation. Unnecessary containment damages Trust. Loss: exfiltration completes or Trust reaches zero. Stop all attacker activity to be Evicted; reach tick 14 without a breach to be Survived. Outcomes are evaluated when you end your turn.</p><p>Business costs for clean hosts: WS −10; finance workstation −25; FS −25; BKP −30; APP −35; ADM −20; DC −50. Clean workflow credentials −10. Containing compromised hosts or stolen credentials costs zero. Actions cannot be undone.</p></details></section>
   <div class="console-grid"><aside><section class="panel"><div class="panel-heading"><h2>01 / Fleet</h2><span class="muted">10 HOSTS</span></div><div class="host-grid">${v.hosts.map((h) => `<div class="host ${h.isolated ? "isolated" : ""}"><div><span class="host-dot"></span><b>${h.host}</b></div><small>${h.host === v.finance ? "Finance workstation" : h.host.startsWith("WS") ? "Workstation" : ({ "FS-01": "File server", "APP-01": "Finance app", "DC-01": "Domain controller", "ADM-01": "Admin jump host", "BKP-01": "Backup server" } as Record<string, string>)[h.host]}</small><button data-isolate="${h.host}" ${h.isolated ? "disabled" : disabled()}>${h.isolated ? "Isolated" : "Isolate · 1 AP"}</button></div>`).join("")}</div><p class="muted fine">Dots show connectivity only. No host health verdicts.</p></section><section class="panel"><h2>Credential control</h2><label>Account<select id="credential">${options(users)}</select></label><button id="reset" ${disabled()}>Reset credential · 1 AP</button><p class="muted fine">${v.reset.length ? `Reset: ${v.reset.join(", ")}` : "Reset stops new logons. Isolate established sessions."}</p></section></aside>
   <div class="investigation"><section class="panel"><div class="panel-heading"><h2>02 / Telemetry</h2><span class="badge">${v.eventCount} EVENTS</span></div><form id="query-form"><div class="filters"><label>Host<select id="q-host"><option value="">All hosts</option>${options(hosts, queryFilter.host)}</select></label><label>User<select id="q-user"><option value="">All users</option>${options(users, queryFilter.user)}</select></label><label>Event type<select id="q-type"><option value="">All types</option>${options(["process", "logon", "network"], queryFilter.event_type)}</select></label><label>From tick<input id="q-from" type="number" min="1" max="14" value="${queryFilter.from}"></label><label>To tick<input id="q-to" type="number" min="1" max="14" value="${queryFilter.to}"></label><button ${disabled()}>Query · 1 AP</button></div></form><div class="subheading"><span>${queryRows ? "QUERY RESULTS · NEWEST FIRST · MAX 40" : `CURRENT TICK FEED · T${v.tick}`}</span>${queryRows ? '<button id="live-feed" class="text-button">Return to current tick</button>' : "<span>Query history for context</span>"}</div>${eventTable(queryRows ?? [...v.recent].reverse())}</section></div>
-  <aside class="detections"><section class="panel"><div class="panel-heading"><h2>03 / Detections</h2><span class="muted">${v.rules.length} / 8</span></div><label for="rule">${editing ? `Edit rule ${editing} · free` : "New detection rule"}</label><textarea id="rule" rows="5" spellcheck="false">${esc(draft)}</textarea><div class="button-row"><button id="deploy" ${editing ? "" : disabled()}>${editing ? "Save edit · free" : "Deploy rule · 1 AP"}</button>${editing ? '<button id="cancel-edit" class="quiet">Cancel</button>' : ""}</div><details class="dsl-help"><summary>DSL reference</summary><p>Comparisons: <code>= != contains</code>. Integers also support <code>&gt; &lt; &gt;= &lt;=</code>. Join with <code>AND</code>. Strings use double quotes; matches ignore case. Multiple rules act as alternatives.</p><p>Fields: event_type, host, user, process_name, parent_process, command_line, source_host, dest_host, dest_domain, logon_type, bytes, tick.</p><p>No OR, NOT, regex, parentheses, aggregation or JavaScript. Missing fields never match. All detections back-scan existing telemetry.</p></details><div class="rules">${v.rules.map((r) => `<article><code>${esc(r.text)}</code><div><button data-edit="${r.id}" class="text-button">Edit #${r.id}</button><button data-remove="${r.id}" class="text-button">Remove</button></div></article>`).join("")}</div><button id="export-rules" class="quiet export">Export rules ${license ? "↓" : "· Pro 🔒"}</button></section><section class="panel alerts"><div class="panel-heading"><h2>Alerts</h2><span class="badge amber">${v.alerts.length} MATCHES</span></div><p class="muted fine">Matches are leads, not verdicts. Check source host and parent process.</p>${v.alerts.length ? v.alerts.map((a) => `<article class="alert"><div><b>${esc(a.event.host)}</b><span>T${a.event.tick} · ${a.event.id} · R${a.rules.join(", R")}</span></div><code>${esc(a.event.command_line ?? `${a.event.dest_domain ?? a.event.source_host} · ${a.event.bytes ?? a.event.logon_type}`)}</code><details><summary>Matching raw event</summary><pre>${esc(JSON.stringify(a.event, null, 2))}</pre></details></article>`).join("") : '<div class="empty"><span class="radar">◎</span>No rules have matched.<br>Deploy a detection to start watching.</div>'}</section></aside></div>
+  <aside class="detections"><section class="panel"><div class="panel-heading"><h2>03 / Detections</h2><span class="muted">${v.rules.length} / 8</span></div><label for="rule">${editing ? `Edit rule ${editing} · free` : "New detection rule"}</label><textarea id="rule" rows="5" spellcheck="false">${esc(draft)}</textarea><div class="button-row"><button id="deploy" ${editing ? "" : disabled()}>${editing ? "Save edit · free" : "Deploy rule · 1 AP"}</button>${editing ? '<button id="cancel-edit" class="quiet">Cancel</button>' : ""}</div><details class="dsl-help"><summary>Import rule-set JSON</summary><label>Rule-set file<input id="import-rules" type="file" accept=".json,application/json"></label>${importedRules.length ? `<label>Choose a rule to draft<select id="imported-rule">${importedRules.map((text, i) => `<option value="${i}" ${text === draft ? "selected" : ""}>${esc(text)}</option>`).join("")}</select></label><p>Deploy each selected rule for 1 AP.</p>` : ""}</details><details class="dsl-help"><summary>DSL reference</summary><p>Comparisons: <code>= != contains</code>. Integers also support <code>&gt; &lt; &gt;= &lt;=</code>. Join with <code>AND</code>. Strings use double quotes; matches ignore case. Multiple rules act as alternatives.</p><p>Fields: event_type, host, user, process_name, parent_process, command_line, source_host, dest_host, dest_domain, logon_type, bytes, tick.</p><p>No OR, NOT, regex, parentheses, aggregation or JavaScript. Missing fields never match. All detections back-scan existing telemetry.</p></details><div class="rules">${v.rules.map((r) => `<article><code>${esc(r.text)}</code><div><button data-edit="${r.id}" class="text-button">Edit #${r.id}</button><button data-remove="${r.id}" class="text-button">Remove</button></div></article>`).join("")}</div><button id="export-rules" class="quiet export">Export rules ${license ? "↓" : "· Pro 🔒"}</button></section><section class="panel alerts"><div class="panel-heading"><h2>Alerts</h2><span class="badge amber">${v.alerts.length} MATCHES</span></div><p class="muted fine">Matches are leads, not verdicts. Check source host and parent process.</p>${v.alerts.length ? v.alerts.map((a) => `<article class="alert"><div><b>${esc(a.event.host)}</b><span>T${a.event.tick} · ${a.event.id} · R${a.rules.join(", R")}</span></div><code>${esc(a.event.command_line ?? `${a.event.dest_domain ?? a.event.source_host} · ${a.event.bytes ?? a.event.logon_type}`)}</code><details><summary>Matching raw event</summary><pre>${esc(JSON.stringify(a.event, null, 2))}</pre></details></article>`).join("") : '<div class="empty"><span class="radar">◎</span>No rules have matched.<br>Deploy a detection to start watching.</div>'}</section></aside></div>
   <section class="turn-bar"><div><b>${v.ap ? `${v.ap} AP remaining` : "Actions spent"}</b><span>Ending the turn resolves transfers and advances five minutes. Unspent AP is lost.</span></div><button id="end-turn" class="primary">End turn <span>→</span></button></section>
   <section class="setup panel"><label>Next shift seed<select id="seed">${options(seedCodes, v.seed)}</select></label><label>Profile<select id="profile"><option>Standard</option><option ${v.profile === "Fast Operator" ? "selected" : ""}>Fast Operator</option></select></label><label>Custom seed ${license ? "" : "· Pro 🔒"}<input id="custom-seed" maxlength="64" placeholder="e.g. NIGHT-SHIFT"></label><button id="restart" class="quiet">Start new shift</button><button id="share" class="quiet">Share seed ${license ? "↗" : "· Pro 🔒"}</button></section>`;
 }
@@ -123,6 +125,15 @@ function exportJson(name: string, data: unknown) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function wire() {
+  document.getElementById("import-rules")?.addEventListener("change", (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) void importRules(file);
+  });
+  document.getElementById("imported-rule")?.addEventListener("change", () => {
+    draft = importedRules[Number(value("imported-rule"))];
+    editing = undefined;
+    render();
+  });
   click("pack", () => {
     showPack = !showPack;
     render();
@@ -135,7 +146,7 @@ function wire() {
     void activate(value("license-key"));
   });
   click("deactivate", () => {
-    const saved = saveLicense(null, localStorage);
+    const saved = persistLicense(null);
     license = null;
     message = saved
       ? "Demo license deactivated."
@@ -269,6 +280,33 @@ function wire() {
     render();
   });
 }
+function persistLicense(state: LicenseState) {
+  try {
+    return saveLicense(state, localStorage);
+  } catch {
+    return false;
+  }
+}
+async function importRules(file: File) {
+  try {
+    if (file.size > 65536) {
+      message = "Rule-set files must be at most 64 KB.";
+      render();
+      return;
+    }
+    const result = readRuleSet(await file.text());
+    if (result.error !== undefined) message = result.error;
+    else {
+      importedRules = result.rules;
+      draft = importedRules[0];
+      editing = undefined;
+      message = `Loaded ${importedRules.length} rule definitions. Deploy each selected rule for 1 AP.`;
+    }
+  } catch {
+    message = "Could not read this rule-set file.";
+  }
+  render();
+}
 async function activate(key: string) {
   if (licenseBusy) return;
   licenseBusy = true;
@@ -276,7 +314,7 @@ async function activate(key: string) {
   const verified = await verifyLicense(key);
   if (verified) {
     license = verified;
-    message = saveLicense(verified, localStorage)
+    message = persistLicense(verified)
       ? "Analyst Pack activated."
       : "Activated for this session. Browser storage is unavailable.";
   } else

@@ -4,7 +4,7 @@
 
 Invoice, ten hosts, three released seeds, Standard and Fast Operator, three attack stages, one conditional RDP fallback, two causal business workflows, DSL/back-scan/alerts, AP/Trust containment, four outcomes, grades, side-by-side after-action and raw replay, demo licensing, custom setup sharing, and rule/after-action JSON exports. No backend or runtime external service.
 
-Cut: rule-set import. No core-loop cuts. Hard and JSON exports retained because their checks pass.
+No cuts. Rule-set import loads validated drafts; each deployment still costs 1 AP. Hard and JSON exports retained because their checks pass.
 
 ## Interpretation decisions
 
@@ -18,9 +18,9 @@ Cut: rule-set import. No core-loop cuts. Hard and JSON exports retained because 
 ## Local verification
 
 - TypeScript typecheck and ESLint.
-- 106 Vitest tests: DSL acceptance/rejection and positions; numeric/string semantics; absent fields; back-scan and rule alternatives; AP/rule cap/Trust; deterministic event/outcome equality; parent/source causality and ordering; isolation/reset boundaries; fallback conditions; overlap and clue query visibility; separate streams; all four policy outcomes over 3 seeds × 2 profiles.
+- 112 Vitest tests: DSL acceptance/rejection and positions; numeric/string semantics; absent fields; back-scan and rule alternatives; AP/rule cap/Trust; deterministic event/outcome equality; parent/source causality and ordering; isolation/reset boundaries; fallback conditions; overlap and clue query visibility; separate streams; all four policy outcomes over 3 seeds × 2 profiles.
 - Full winning and losing trace snapshots supplement semantic assertions. Snapshots are not the correctness oracle.
-- Playwright production-build smoke: early win and subsequent breach, DSL errors without AP loss, Pro gate, HMAC activation/reload/deactivation, Hard custom setup, download, mobile width, no external requests.
+- Playwright production-build smoke: early win and subsequent breach, DSL errors without AP loss, Pro gate, HMAC activation/reload/deactivation, Hard custom setup, download, mobile width, no external requests, validated rule import with normal AP charging, unavailable browser storage, and replay clue links.
 - Three manual, agent-operated UI walkthroughs used a persistent Chromium instance, chosen actions, raw-row inspection and screenshots. These were separate from the automated smoke suite. No independent human participated.
 
 ## Manual-play observations

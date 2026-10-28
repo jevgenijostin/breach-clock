@@ -202,6 +202,10 @@ describe.each(seedCodes)("%s policy and fairness", (seed) => {
       let previous = 100;
       while (!g.outcome) {
         const view = g.view();
+        for (const event of view.recent) {
+          expect(event.session_id).toMatch(/^S\d+$/);
+          if (event.logon_id) expect(event.logon_id).toMatch(/^S\d+$/);
+        }
         expect(view.trust).toBeLessThanOrEqual(previous);
         previous = view.trust;
         expect(JSON.stringify(view)).not.toMatch(

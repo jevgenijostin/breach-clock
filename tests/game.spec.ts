@@ -28,6 +28,10 @@ test("early containment wins through the browser; next seed can lose to breach",
   ).toBeVisible();
   await expect(page.locator(".grade")).toHaveText("A");
   await expect(page.getByText("What happened / attacker truth")).toBeVisible();
+  const clueLink = page.locator(".timeline a").first();
+  const target = await clueLink.getAttribute("href");
+  await clueLink.click();
+  await expect(page.locator(target!)).toBeVisible();
   await page.getByRole("button", { name: "Play another seed" }).click();
   for (let i = 0; i < 11; i++)
     await page.getByRole("button", { name: "End turn" }).click();
@@ -98,4 +102,60 @@ test("small screen remains usable and makes no external requests", async ({
   await page.locator("#deploy").click();
   await expect(page.locator(".alert")).toHaveCount(2);
   expect(external).toEqual([]);
+});
+
+test("rule import validates drafts and deployment retains AP cost with unavailable storage", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", {
+      get() {
+        throw new Error("Storage blocked");
+      },
+    });
+  });
+  await page.goto("./");
+  await page.getByText("Import rule-set JSON", { exact: true }).click();
+  await page
+    .locator("#import-rules")
+    .setInputFiles({
+      name: "rules.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(
+        JSON.stringify({
+          version: 1,
+          rules: ['event_type = "logon"', "bytes > 50000000"],
+        }),
+      ),
+    });
+  await expect(page.locator("#message")).toContainText("Loaded 2");
+  await expect(page.locator(".pips")).toHaveAttribute(
+    "aria-label",
+    "3 action points",
+  );
+  await expect(page.locator("#rule")).toHaveValue('event_type = "logon"');
+  await page.locator("#deploy").click();
+  await expect(page.locator(".pips")).toHaveAttribute(
+    "aria-label",
+    "2 action points",
+  );
+  await page.locator("#pack").click();
+  const body = Buffer.from(
+    JSON.stringify({
+      version: 1,
+      tier: "paid",
+      issuedAt: 1,
+      licenseId: "storage-test",
+    }),
+  ).toString("base64");
+  const key = `${body}.${createHmac("sha256", "breachclock-demo-v1-client-inspectable-secret").update(body).digest("hex")}`;
+  await page.locator("#license-key").fill(key);
+  await page.locator("#activate").click();
+  await expect(page.locator("#message")).toContainText(
+    "Activated for this session",
+  );
+  await page.locator("#deactivate").click();
+  await expect(page.locator("#message")).toContainText(
+    "Deactivated for this session",
+  );
 });

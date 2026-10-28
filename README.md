@@ -80,7 +80,7 @@ Demo licensing: not secure. No payment integration or real license enforcement.
 
 `src/license.ts` mirrors the CoverBoard/PlayBoard WebCrypto HMAC-SHA-256 pattern. The deliberately inspectable `DEMO_SECRET` signs `{version, tier:"paid", issuedAt, licenseId}`. The key is stored in `breachclock.license.v1` in localStorage and reverified on load. Activation is asynchronous; deactivation removes it. This is a product demonstration, not access control. No accounts, backend, external API calls or analytics. Asset requests stay on the site's origin; external documentation links open only when followed.
 
-Rule-set import is not shipped. Exports are readable JSON, not a promised round-trip import format. Shared URLs encode the setup, not a replay of player actions.
+Rule-set JSON import is free: open the import control, load a version-1 rules file, choose a validated definition, then deploy it for the usual 1 AP. Import accepts at most eight rules and never bypasses the AP or active-rule limits. Shared URLs encode the setup, not a replay of player actions.
 
 ## Run and verify
 
