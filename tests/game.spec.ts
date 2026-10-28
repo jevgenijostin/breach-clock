@@ -10,7 +10,9 @@ test("early containment wins through the browser; next seed can lose to breach",
     page.getByRole("heading", { name: "Keep the company online." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "End turn" }).click();
-  await page.locator('#rule').fill('process_name = "powershell.exe" AND parent_process = "winword.exe"');
+  await page
+    .locator("#rule")
+    .fill('process_name = "powershell.exe" AND parent_process = "winword.exe"');
   await page.getByRole("button", { name: "Deploy rule · 1 AP" }).click();
   await expect(page.locator(".alert")).toHaveCount(1);
   await expect(page.locator(".alert")).toContainText("WS-03");

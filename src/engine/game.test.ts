@@ -141,7 +141,10 @@ describe.each(seedCodes)("%s policy and fairness", (seed) => {
       expect(
         events.some((e) => e.tick === 2 && e.parent_process === "winword.exe"),
       ).toBe(true);
-      const exfil = events.filter((e) => e.dest_domain === "cdn-sync.example" && Number(e.bytes) > 50000000);
+      const exfil = events.filter(
+        (e) =>
+          e.dest_domain === "cdn-sync.example" && Number(e.bytes) > 50000000,
+      );
       expect(
         events.some(
           (e) =>
@@ -291,9 +294,7 @@ describe("action semantics", () => {
       ),
     ).toHaveLength(0);
     expect(
-      r.events.some(
-        (e) => e.host === "FS-01" && r.maliciousIds.includes(e.id),
-      ),
+      r.events.some((e) => e.host === "FS-01" && r.maliciousIds.includes(e.id)),
     ).toBe(false);
   });
   it("reset prevents later use and breaks the associated workflow", () => {
@@ -314,7 +315,8 @@ describe("action semantics", () => {
       r.events.filter(
         (e) =>
           e.tick > 3 &&
-          ["svc-backup", "dana"].includes(e.user) && !r.maliciousIds.includes(e.id),
+          ["svc-backup", "dana"].includes(e.user) &&
+          !r.maliciousIds.includes(e.id),
       ),
     ).toHaveLength(0);
     expect(r.path.some((p) => p.action.includes("Alternate route"))).toBe(

@@ -16,12 +16,17 @@ export class Telemetry {
     }
     const id = `E${String(this.events.length + 1).padStart(4, "0")}`;
     if (!this.sessions.has(input.session_id)) {
-      this.sessions.set(input.session_id, `S${String(this.sessions.size + 1).padStart(4, "0")}`);
+      this.sessions.set(
+        input.session_id,
+        `S${String(this.sessions.size + 1).padStart(4, "0")}`,
+      );
     }
     const event: Event = {
       ...input,
       session_id: this.sessions.get(input.session_id)!,
-      ...(input.logon_id ? { logon_id: this.sessions.get(input.logon_id)! } : {}),
+      ...(input.logon_id
+        ? { logon_id: this.sessions.get(input.logon_id)! }
+        : {}),
       id,
       tick,
       timestamp:

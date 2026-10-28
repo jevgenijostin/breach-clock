@@ -404,6 +404,21 @@ td:nth-child(4) {
   color: #d8e4ee;
   overflow-wrap: anywhere;
 }
+tr:target {
+  outline: 2px solid #85e6c5;
+  outline-offset: -2px;
+  scroll-margin-top: 42px;
+}
+@media (min-width: 1151px) {
+  .detections:has(.alert) {
+    display: flex;
+    flex-direction: column;
+  }
+  .detections:has(.alert) .alerts {
+    order: -1;
+    max-height: 360px;
+  }
+}
 details {
   font-size: 11px;
   color: #8eabc0;
