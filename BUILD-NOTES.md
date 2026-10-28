@@ -37,4 +37,8 @@ Fairness for unfamiliar real players; realism or ATT&CK fidelity; comprehensive 
 
 Target: https://jevgenijostin.github.io/breach-clock/
 
-CI and live-site verification are recorded after the deployment run completes.
+- Shipped code: `7b02f27` (pushed directly to main).
+- [CI run 40765388578](https://github.com/jevgenijostin/breach-clock/actions/runs/40765388578): **success** on both `ubuntu-latest` and `windows-latest`, including typecheck, lint, 112 Vitest tests, four Playwright flows, and production build. Pages deployment also succeeded.
+- Public-site verification: HTTP 200; final rule-import control present; played the T3 Evicted / A policy and an untouched Breached policy on the deployed origin. No browser page errors in either flow.
+- Windows' Chromium dependency installation was slow but completed successfully; no CI checks were bypassed for the shipped code.
+- This verification record is a documentation-only follow-up; its commit skips rerunning the unchanged application checks.
